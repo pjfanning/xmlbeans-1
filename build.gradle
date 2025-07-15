@@ -40,6 +40,17 @@ plugins {
     id 'org.cyclonedx.bom' version '2.3.1'
     id 'ru.vyarus.animalsniffer' version '1.7.2'
     id 'com.adarshr.test-logger' version '4.0.0'
+    id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
+}
+
+nexusPublishing {
+    repositories {
+        // see https://central.sonatype.org/publish/publish-portal-ossrh-staging-api/#configuration
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
+    }
 }
 
 // Only add the plugin for Sonar if enabled
@@ -49,7 +60,7 @@ if (project.hasProperty('enableSonar')) {
 }
 
 
-group = 'org.apache.xmlbeans'
+group = 'com.github.pjfanning'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -528,7 +539,7 @@ distributions {
 publishing {
     publications {
         POI(MavenPublication) {
-            groupId 'org.apache.xmlbeans'
+            groupId 'com.github.pjfanning'
             artifactId project.archivesBaseName
             version XMLBeansVersion
 
