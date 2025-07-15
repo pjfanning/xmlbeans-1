@@ -484,7 +484,6 @@
         <schemaComp schemaName="sXMLCURSOR" src="${cases.location}/xbean/xmlcursor" dest="build/test-xmlcursor" classpathref="xmlbeans-test"/>
         <schemaComp schemaName="sDOM" src="${cases.location}/xbean/dom" dest="build/test-dom" classpathref="xmlbeans-test"/>
         <schemaComp schemaName="sSCOMP" src="${cases.location}/xbean/scomp" dest="build/test-scomp" classpathref="xmlbeans-test"/>
-        <schemaComp schemaName="sSIMPLE" src="${cases.location}/xbean/simple" dest="build/test-simple" classpathref="xmlbeans-test"/>
         <schemaComp schemaName="sVALIDATE" src="${cases.location}/xbean/ValidatingStream" dest="build/test-validate" classpathref="xmlbeans-test"/>
         <schemaComp schemaName="sUSERTYPE" src="${cases.location}/xbean/usertype" dest="build/test-usertype" classpathref="xmlbeans-test"/>
         <schemaComp schemaName="sLAX" src="${cases.location}/xbean/compile/scomp/detailed" dest="build/test-lax" classpathref="xmlbeans-test"/>
