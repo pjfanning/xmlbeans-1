@@ -402,7 +402,7 @@ tasks.withType(GenerateModuleMetadata) {
 }
 
 tasks.withType(AbstractArchiveTask).configureEach {
-    preserveFileTimestamps = false
+    // preserveFileTimestamps = false
     reproducibleFileOrder = true
 }
 
