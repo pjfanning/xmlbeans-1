@@ -396,6 +396,120 @@ public class XmlComplexContentImpl extends XmlObjectBase {
         // ... then come back and insert the elements starting with startSource
         // up to i from the sources array into the current array, starting with
         // startDest
+        int n = i;
+        for (; m > n - startSrc + startDest; m--) {
+            if (set == null) {
+                store.remove_element(elemName, m - 1);
+            } else {
+                store.remove_element(set, m - 1);
+            }
+        }
+
+        int j;
+        for (i = startSrc, j = startDest; i < n; i++, j++) {
+            TypeStoreUser user;
+
+            if (j >= m) {
+                user = store.add_element_user(elemName);
+            } else if (set == null) {
+                user = store.find_element_user(elemName, j);
+            } else {
+                user = store.find_element_user(set, j);
+            }
+
+            ((XmlObjectBase) user).set(sources[i]);
+        }
+
+        // We can't just delegate to array_setter because we need
+        // synchronization on the sources (potentially each element
+        // in the array on a different lock)
+        // get_store().array_setter( sources, elemName );
+    }
+
+    protected void arraySetterHelper2(XmlObject[] sources, QName elemName, QNameSet set) {
+        TypeStore store = get_store();
+
+        if (sources == null || sources.length == 0) {
+            if (set == null) {
+                store.remove_elements_after(elemName, 0);
+            } else {
+                store.remove_elements_after(set, 0);
+            }
+            return;
+        }
+
+        // Verify if the sources contain children of this node
+        int i;
+        // how many elements in the original array
+        int m = (set == null) ? store.count_elements(elemName) : store.count_elements(set);
+        int startSrc = 0, startDest = 0;
+        for (i = 0; i < sources.length; i++) {
+            if (sources[i].isImmutable()) {
+                continue;
+            }
+            try (XmlCursor c = sources[i].newCursor()) {
+                if (c.toParent() && c.getObject() == this) {
+                    break;
+                }
+            }
+        }
+        if (i < sources.length) {
+            TypeStoreUser current = (set == null) ? store.find_element_user(elemName, 0) : store.find_element_user(set, 0);
+            if (current == sources[i]) {
+                // The new object matches what already exists in the array
+                // Heuristic: we optimize for the case where the new elements
+                // in the array are the same as the existing elements with
+                // potentially new elements inserted
+
+                // First insert the new element in the array at position 0
+                int j;
+                for (j = 0; j < i; j++) {
+                    TypeStoreUser user = (set == null) ? store.insert_element_user(elemName, j) : store.insert_element_user(set, elemName, j);
+                    ((XmlObjectBase) user).set(sources[j]);
+                }
+                for (i++, j++; i < sources.length; i++, j++) {
+                    // Cursor is implicitly closed
+                    XmlCursor c = sources[i].isImmutable() ? null : sources[i].newCursor();
+                    if (c != null && c.toParent() && c.getObject() == this) {
+                        c.close();
+                        current = (set == null) ? store.find_element_user(elemName, j) : store.find_element_user(set, j);
+                        if (current != sources[i]) {
+                            // Fall back to the general case
+                            break;
+                        }
+                    } else {
+                        if (c != null) {
+                            c.close();
+                        }
+                        // Insert before the current element
+                        TypeStoreUser user = (set == null) ? store.insert_element_user(elemName, j) : store.insert_element_user(set, elemName, j);
+                        ((XmlObjectBase) user).set(sources[i]);
+                    }
+                }
+                startDest = j;
+                startSrc = i;
+                m = store.count_elements(elemName);
+            }
+            // Fall through
+        } else {
+            // All of the elements in the existing array are to
+            // be deleted and replaced with elements from the
+            // sources array
+        }
+
+        // The general case: we assume that some of the elements
+        // in the new array already exist, but at different indexes
+
+        // Starting with position i in the sources array, copy the remaining elements
+        // to the end of the original array...
+        for (int j = i; j < sources.length; j++) {
+            TypeStoreUser user = store.add_element_user(elemName);
+            ((XmlObjectBase) user).set(sources[j]);
+        }
+
+        // ... then come back and insert the elements starting with startSource
+        // up to i from the sources array into the current array, starting with
+        // startDest
         final int n = i;
         final int startPos = n - startSrc + startDest;
         if (m > startPos) {
@@ -429,7 +543,7 @@ public class XmlComplexContentImpl extends XmlObjectBase {
         // get_store().array_setter( sources, elemName );
     }
 
-    protected void arraySetterHelper2(XmlObject[] sources, QName elemName, QNameSet set) {
+    protected void arraySetterHelper3(XmlObject[] sources, QName elemName, QNameSet set) {
         TypeStore store = get_store();
 
         if (sources == null || sources.length == 0) {
