@@ -2367,12 +2367,16 @@ abstract class Xobj implements TypeStore {
             throw new IllegalStateException();
         }
 
+        ArrayList<Xobj> toRemove = new ArrayList<>();
         Xobj x;
-
         for (x = _firstChild; x != null; x = x._nextSibling) {
             if (x.isElem() && names.contains(x._name) && --i < 0) {
-                removeElement(x);
+                toRemove.add(x);
             }
+        }
+        final int size = toRemove.size();
+        for (int j = size - 1; j >= 0; j--) {
+            removeElement(toRemove.get(j));
         }
     }
 
