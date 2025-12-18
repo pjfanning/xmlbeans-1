@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public abstract class JavaDigestableHolder extends XmlObjectBase {
+abstract class JavaDigestableHolder extends XmlObjectBase {
     protected byte[] _value;
 
     //because computing hashcode is expensive we'll cache it
