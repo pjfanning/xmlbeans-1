@@ -373,8 +373,10 @@ public class XmlComplexContentImpl extends XmlObjectBase {
                     if (c != null && c.toParent() && c.getObject() == this) {
                         c.close();
                         // Each of the originalI pre-inserts shifted existing elements right by
-                        // originalI positions; each subsequent insert shifts them one more.
-                        // So the original element now at store position j is existingList[j - originalI - insertCount].
+                        // originalI positions; each subsequent insert in this loop shifts them
+                        // one more. So j (the current store position) maps to
+                        // existingList[j - originalI - insertCount], where originalI accounts
+                        // for pre-loop inserts and insertCount for in-loop inserts so far.
                         int existingIdx = j - originalI - insertCount;
                         current = (existingIdx < existingList.size()) ? (TypeStoreUser) existingList.get(existingIdx) : null;
                         if (current != sources[i]) {
