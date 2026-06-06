@@ -3205,8 +3205,12 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
             try {
                 return list.toArray(arrayCon);
             } catch (ArrayStoreException e) {
+                if (list.isEmpty()) {
+                    throw e;
+                }
+                String elementClass = list.get(0).getClass().getName();
                 throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
-                        ") is not compatible with the type of underlying elements (" + list.getClass().getComponentType().getName() + ")", e);
+                        ") is not compatible with the type of underlying elements (" + elementClass + ")", e);
             }
 
         }
@@ -3304,8 +3308,12 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
             try {
                 return list.toArray(arrayCon);
             } catch (ArrayStoreException e) {
+                if (list.isEmpty()) {
+                    throw e;
+                }
+                String elementClass = list.get(0).getClass().getName();
                 throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
-                        ") is not compatible with the type of underlying elements (" + list.getClass().getComponentType().getName() + ")", e);
+                        ") is not compatible with the type of underlying elements (" + elementClass + ")", e);
             }
         }
     }
