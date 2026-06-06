@@ -3205,14 +3205,34 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
             try {
                 return list.toArray(arrayCon);
             } catch (ArrayStoreException e) {
-                if (list.isEmpty()) {
-                    throw e;
-                }
-                String elementClass = list.get(0).getClass().getName();
-                throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
-                        ") is not compatible with the type of underlying elements (" + elementClass + ")", e);
+                return reportArrayStoreException(list, arrayCon, e);
             }
+        }
+    }
 
+    protected <T extends XmlObject> T[] getXmlObjectArray(QNameSet elementSet, T[] arrayCon) {
+        synchronized (monitor()) {
+            List<XmlObjectBase> list = getBaseList(elementSet);
+            try {
+                return list.toArray(arrayCon);
+            } catch (ArrayStoreException e) {
+                return reportArrayStoreException(list, arrayCon, e);
+            }
+        }
+    }
+
+    private <T extends XmlObject> T[] reportArrayStoreException(List<XmlObjectBase> list, T[] arrayCon,
+                                                                ArrayStoreException e) {
+        if (list.isEmpty()) {
+            throw e;
+        }
+        String elementClass = list.get(0).getClass().getName();
+        Class<?> arrayClass = arrayCon.getClass().getComponentType();
+        if (arrayClass == null) {
+            throw e;
+        } else {
+            throw new IllegalStateException("The requested return type for the array (" + arrayClass.getName() +
+                    ") is not compatible with the type of underlying elements (" + elementClass + ")", e);
         }
     }
 
@@ -3299,22 +3319,6 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
                 .map(org.apache.xmlbeans.SimpleValue.class::cast)
                 .mapToLong(org.apache.xmlbeans.SimpleValue::getLongValue)
                 .toArray();
-        }
-    }
-
-    protected <T extends XmlObject> T[] getXmlObjectArray(QNameSet elementSet, T[] arrayCon) {
-        synchronized (monitor()) {
-            List<XmlObjectBase> list = getBaseList(elementSet);
-            try {
-                return list.toArray(arrayCon);
-            } catch (ArrayStoreException e) {
-                if (list.isEmpty()) {
-                    throw e;
-                }
-                String elementClass = list.get(0).getClass().getName();
-                throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
-                        ") is not compatible with the type of underlying elements (" + elementClass + ")", e);
-            }
         }
     }
 
