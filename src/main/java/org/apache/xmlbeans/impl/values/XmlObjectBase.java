@@ -3201,7 +3201,14 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
 
     protected <T extends XmlObject> T[] getXmlObjectArray(QName elementName, T[] arrayCon) {
         synchronized (monitor()) {
-            return getBaseList(elementName).toArray(arrayCon);
+            List<XmlObjectBase> list = getBaseList(elementName);
+            try {
+                return list.toArray(arrayCon);
+            } catch (ArrayStoreException e) {
+                throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
+                        ") is not compatible with the type of underlying elements (" + list.getClass().getComponentType().getName() + ")", e);
+            }
+
         }
     }
 
@@ -3293,7 +3300,13 @@ public abstract class XmlObjectBase implements TypeStoreUser, Serializable, XmlO
 
     protected <T extends XmlObject> T[] getXmlObjectArray(QNameSet elementSet, T[] arrayCon) {
         synchronized (monitor()) {
-            return getBaseList(elementSet).toArray(arrayCon);
+            List<XmlObjectBase> list = getBaseList(elementSet);
+            try {
+                return list.toArray(arrayCon);
+            } catch (ArrayStoreException e) {
+                throw new IllegalStateException("The requested return type for the array (" + arrayCon.getClass().getComponentType().getName() +
+                        ") is not compatible with the type of underlying elements (" + list.getClass().getComponentType().getName() + ")", e);
+            }
         }
     }
 
