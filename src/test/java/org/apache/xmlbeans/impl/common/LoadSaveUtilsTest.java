@@ -19,6 +19,8 @@ import org.apache.xmlbeans.XmlOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXParseException;
 
@@ -29,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LoadSaveUtilsTest {
@@ -41,6 +44,10 @@ class LoadSaveUtilsTest {
         assertEquals("r", doc.getDocumentElement().getNodeName());
         assertEquals("1", doc.getDocumentElement().getAttribute("a"));
         assertEquals("text", doc.getDocumentElement().getTextContent());
+        // Sax2Dom is registered as the lexical handler, so comments are kept
+        Node last = doc.getDocumentElement().getLastChild();
+        assertEquals(Node.COMMENT_NODE, last.getNodeType());
+        assertEquals("x", last.getNodeValue());
     }
 
     // xmlText2GenericDom must not resolve external entities, like every other
@@ -53,6 +60,59 @@ class LoadSaveUtilsTest {
         Document doc = LoadSaveUtils.xmlText2GenericDom(
             new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)), DocumentHelper.createDocument());
         assertEquals("", doc.getDocumentElement().getTextContent());
+    }
+
+    @Test
+    void namespacesAreKept() throws Exception {
+        Document doc = LoadSaveUtils.xmlText2GenericDom(
+            stream("<p:r xmlns:p='urn:p' p:a='1'><c xmlns='urn:d'/></p:r>"), DocumentHelper.createDocument());
+        Element r = doc.getDocumentElement();
+        assertEquals("urn:p", r.getNamespaceURI());
+        assertEquals("r", r.getLocalName());
+        assertEquals("1", r.getAttributeNS("urn:p", "a"));
+        assertEquals("urn:d", ((Element) r.getFirstChild()).getNamespaceURI());
+    }
+
+    @Test
+    void internalEntityIsExpanded() throws Exception {
+        Document doc = LoadSaveUtils.xmlText2GenericDom(
+            stream("<!DOCTYPE r [<!ENTITY x 'expanded'>]><r>&x;</r>"), DocumentHelper.createDocument());
+        assertEquals("expanded", doc.getDocumentElement().getTextContent());
+    }
+
+    @Test
+    void malformedXmlThrows() {
+        assertThrows(SAXParseException.class, () -> LoadSaveUtils.xmlText2GenericDom(
+            stream("<r><c></r>"), DocumentHelper.createDocument()));
+    }
+
+    // the XmlOptions default limit (2048) applies, not the parser's own default
+    @Test
+    void defaultEntityExpansionLimitIsApplied() {
+        String xml = "<!DOCTYPE r [<!ENTITY a 'aaaaaaaaaa'>"
+            + "<!ENTITY b '&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;'>"
+            + "<!ENTITY c '&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;'>"
+            + "<!ENTITY d '&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;'>]><r>&d;&d;&d;</r>";
+        assertThrows(SAXParseException.class, () -> LoadSaveUtils.xmlText2GenericDom(
+            stream(xml), DocumentHelper.createDocument()));
+    }
+
+    @Test
+    void externalDtdIsNotLoaded(@TempDir Path dir) throws Exception {
+        Path dtd = dir.resolve("r.dtd");
+        Files.write(dtd, "<!ATTLIST r a CDATA 'SECRET'>".getBytes(StandardCharsets.UTF_8));
+        String xml = "<!DOCTYPE r SYSTEM '" + dtd.toUri() + "'><r/>";
+        Document doc = LoadSaveUtils.xmlText2GenericDom(stream(xml), DocumentHelper.createDocument());
+        assertFalse(doc.getDocumentElement().hasAttribute("a"));
+    }
+
+    @Test
+    void externalParameterEntityIsNotResolved(@TempDir Path dir) throws Exception {
+        Path ent = dir.resolve("p.ent");
+        Files.write(ent, "<!ATTLIST r a CDATA 'SECRET'>".getBytes(StandardCharsets.UTF_8));
+        String xml = "<!DOCTYPE r [<!ENTITY % p SYSTEM '" + ent.toUri() + "'> %p;]><r/>";
+        Document doc = LoadSaveUtils.xmlText2GenericDom(stream(xml), DocumentHelper.createDocument());
+        assertFalse(doc.getDocumentElement().hasAttribute("a"));
     }
 
     @Test
