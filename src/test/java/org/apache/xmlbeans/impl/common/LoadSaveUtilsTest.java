@@ -15,16 +15,21 @@
 
 package org.apache.xmlbeans.impl.common;
 
+import org.apache.xmlbeans.XmlOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXParseException;
 
 import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LoadSaveUtilsTest {
 
@@ -48,5 +53,41 @@ class LoadSaveUtilsTest {
         Document doc = LoadSaveUtils.xmlText2GenericDom(
             new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)), DocumentHelper.createDocument());
         assertEquals("", doc.getDocumentElement().getTextContent());
+    }
+
+    @Test
+    void nullOptionsUsesDefaults() throws Exception {
+        Document doc = LoadSaveUtils.xmlText2GenericDom(stream("<r>text</r>"), DocumentHelper.createDocument(), null);
+        assertEquals("text", doc.getDocumentElement().getTextContent());
+    }
+
+    @Test
+    void disallowDocTypeDeclaration() {
+        XmlOptions options = new XmlOptions().setDisallowDocTypeDeclaration(true);
+        assertThrows(SAXParseException.class, () -> LoadSaveUtils.xmlText2GenericDom(
+            stream("<!DOCTYPE r [<!ENTITY x 'y'>]><r>&x;</r>"), DocumentHelper.createDocument(), options));
+    }
+
+    @Test
+    void entityExpansionLimit() {
+        String xml = "<!DOCTYPE r [<!ENTITY a 'aaaaaaaaaa'>"
+            + "<!ENTITY b '&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;'>"
+            + "<!ENTITY c '&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;'>]><r>&c;</r>";
+        XmlOptions options = new XmlOptions().setEntityExpansionLimit(10);
+        assertThrows(SAXParseException.class, () -> LoadSaveUtils.xmlText2GenericDom(
+            stream(xml), DocumentHelper.createDocument(), options));
+    }
+
+    @Test
+    void entityResolverFromOptionsIsUsed() throws Exception {
+        String xml = "<!DOCTYPE r [<!ENTITY x SYSTEM 'urn:test:x'>]><r>&x;</r>";
+        XmlOptions options = new XmlOptions().setEntityResolver((publicId, systemId) ->
+            "urn:test:x".equals(systemId) ? new InputSource(new StringReader("resolved")) : null);
+        Document doc = LoadSaveUtils.xmlText2GenericDom(stream(xml), DocumentHelper.createDocument(), options);
+        assertEquals("resolved", doc.getDocumentElement().getTextContent());
+    }
+
+    private static ByteArrayInputStream stream(String xml) {
+        return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
     }
 }
